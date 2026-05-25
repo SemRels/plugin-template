@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   build:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     name: Build ${{ matrix.goos }}-${{ matrix.goarch }}
     runs-on: ubuntu-latest
     strategy:
@@ -66,6 +67,7 @@ jobs:
           if-no-files-found: error
 
   publish:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
@@ -85,18 +87,13 @@ jobs:
           done > dist/checksums.txt
 
       - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh release create "${GITHUB_REF_NAME}" dist/* \
-            --repo "${GITHUB_REPOSITORY}" \
-            --generate-notes \
-            --title "${GITHUB_REF_NAME}"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          name: ${{ github.ref_name }}
 
       - name: Trigger registry sync
-        if: ${{ secrets.REGISTRY_SYNC_TOKEN != '' || secrets.REGISTRY_SYNC_WEBHOOK != '' }}
         shell: bash
         env:
           REGISTRY_SYNC_TOKEN: ${{ secrets.REGISTRY_SYNC_TOKEN }}
@@ -107,17 +104,21 @@ jobs:
         run: |
           set -euo pipefail
           if [ -n "${REGISTRY_SYNC_TOKEN}" ]; then
+            payload=$(printf '{"event_type":"sync-plugins","client_payload":{"source_owner":"%s","source_repo":"%s","tag":"%s"}}' "${PLUGIN_OWNER}" "${PLUGIN_REPO}" "${PLUGIN_TAG}")
             curl --fail --silent --show-error \
               -X POST \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${REGISTRY_SYNC_TOKEN}" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
               https://api.github.com/repos/SemRels/semrel-registry/dispatches \
-              -d '{"event_type":"sync-plugins","client_payload":{"source_owner":"'"${PLUGIN_OWNER}"'","source_repo":"'"${PLUGIN_REPO}"'","tag":"'"${PLUGIN_TAG}"'"}}'
+              -d "${payload}"
           elif [ -n "${REGISTRY_SYNC_WEBHOOK}" ]; then
+            payload=$(printf '{"repository":"%s","owner":"%s","tag":"%s"}' "${PLUGIN_REPO}" "${PLUGIN_OWNER}" "${PLUGIN_TAG}")
             curl --fail --silent --show-error \
               -X POST \
               -H "Content-Type: application/json" \
               "${REGISTRY_SYNC_WEBHOOK}" \
-              -d '{"repository":"'"${PLUGIN_REPO}"'","owner":"'"${PLUGIN_OWNER}"'","tag":"'"${PLUGIN_TAG}"'"}'
+              -d "${payload}"
+          else
+            echo "No registry sync secret configured; skipping dispatch."
           fi
