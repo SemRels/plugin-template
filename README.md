@@ -1,5 +1,7 @@
 # {{PLUGIN_NAME}}
 
+[![Latest Release](https://img.shields.io/github/v/release/SemRels/{{PLUGIN_NAME}}?label=version&color=blue)](https://github.com/SemRels/{{PLUGIN_NAME}}/releases/latest)
+
 > Replace this description with what your SemRel plugin does.
 
 This repository is based on the `SemRels/plugin-template` GitHub template and provides a clean starting point for provider, analyzer, generator, updater, or hook plugins.
