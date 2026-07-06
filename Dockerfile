@@ -19,19 +19,12 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 # ── distroless release image ───────────────────────────────────────────────────
 FROM gcr.io/distroless/static-debian12:nonroot
 
-ARG VERSION=dev
-ARG BUILD_DATE
-ARG VCS_REF
-
-LABEL org.opencontainers.image.title="semrel-plugin-plugin-template" \
-      org.opencontainers.image.description="semrel plugin template subprocess example" \
-      org.opencontainers.image.url="https://semrel.io" \
-      org.opencontainers.image.source="https://github.com/SemRels/plugin-template" \
-      org.opencontainers.image.version="${VERSION}" \
-      org.opencontainers.image.created="${BUILD_DATE}" \
-      org.opencontainers.image.revision="${VCS_REF}" \
-      org.opencontainers.image.licenses="Apache-2.0" \
-      org.opencontainers.image.vendor="SemRels"
+# NOTE: intentionally no repo-specific `org.opencontainers.image.*` LABEL block
+# here. sync-template.yml only substitutes the "plugin-template Authors" line
+# in this file when propagating it to plugin repos (see `sed` step) — it does
+# NOT rewrite LABEL title/description/source values. Adding those here would
+# get copied verbatim (and wrongly) into every plugin's Dockerfile. Add labels
+# in each plugin's own Dockerfile after copying this template, not here.
 
 COPY --from=build /out/plugin /usr/local/bin/plugin
 USER nonroot
