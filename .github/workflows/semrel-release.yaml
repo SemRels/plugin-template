@@ -1,0 +1,107 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The plugin-template Authors
+#
+# semrel-release — uses semrel to version this plugin.
+# Flow: push to main → semrel creates tag → release.yml builds binaries + publishes release
+#
+# condition-github-actions is built from source until its binary releases are stable.
+name: Semrel Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: semrel-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  release:
+    name: Run semrel
+    runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.semrel.outputs.released }}
+      tag:      ${{ steps.semrel.outputs.tag }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Download semrel binary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION=$(gh release view --repo SemRels/semrel --json tagName -q .tagName)
+          gh release download "$VERSION" --repo SemRels/semrel \
+            --pattern "semrel_*_linux_amd64.tar.gz" --dir /tmp
+          tar -xzf /tmp/semrel_*_linux_amd64.tar.gz -C /tmp
+          chmod +x /tmp/semrel
+          echo "semrel $(/tmp/semrel --version 2>/dev/null || /tmp/semrel version 2>/dev/null || echo installed)"
+
+      - name: Install plugins from source
+        # Build condition-github-actions from source (main branch) until binary
+        # releases use the subprocess interface expected by semrel's plugin runner.
+        # See: semrel/.semrel.yaml comment about plugin sourcing strategy.
+        run: |
+          set -euo pipefail
+          PLUGIN_DIR="$HOME/.semrel/plugins"
+          mkdir -p "$PLUGIN_DIR"
+          go install github.com/SemRels/condition-github-actions/cmd/plugin@main
+          mv "$(go env GOPATH)/bin/plugin" "$PLUGIN_DIR/semrel-plugin-condition-github-actions"
+          echo "Installed plugins:"
+          ls -la "$PLUGIN_DIR"
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "semrel-bot"
+          git config user.email "semrel-bot@users.noreply.github.com"
+
+      - name: Run semrel release
+        id: semrel
+        run: /tmp/semrel release --github-output
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push tag to GitHub
+        if: steps.semrel.outputs.released == 'true'
+        run: |
+          TAG="${{ steps.semrel.outputs.tag }}"
+          if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
+            echo "Tag $TAG already exists on remote — skipping (idempotent)."
+          else
+            git push origin "refs/tags/$TAG"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger binary build
+        if: steps.semrel.outputs.released == 'true'
+        run: |
+          TAG="${{ steps.semrel.outputs.tag }}"
+          echo "Triggering release.yml for tag $TAG"
+          gh workflow run release.yml --ref "$TAG" --repo "${{ github.repository }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          if [ "${{ steps.semrel.outputs.released }}" = "true" ]; then
+            echo "### Released ${{ steps.semrel.outputs.tag }} 🚀" >> $GITHUB_STEP_SUMMARY
+            echo "**Bump:** ${{ steps.semrel.outputs.bump }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### No release — no releasable commits found." >> $GITHUB_STEP_SUMMARY
+          fi
