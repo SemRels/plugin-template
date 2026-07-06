@@ -68,12 +68,12 @@ jobs:
 
     steps:
       - name: Check out template
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: template
 
       - name: Check out plugin
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: "SemRels/${{ matrix.plugin }}"
           token: ${{ secrets.SYNC_TOKEN }}
