@@ -4,22 +4,31 @@
 package main
 
 import (
-	"context"
-	"log"
+	"fmt"
+	"io"
 	"os"
 
-	grpcserver "github.com/SemRels/plugin-template/internal/grpc"
-	semrelplugin "github.com/SemRels/plugin-template/internal/plugin"
+	plugin "github.com/SemRels/plugin-template/internal/plugin"
 )
 
-func main() {
-	provider := semrelplugin.NewProvider("replace-me")
-	server := grpcserver.NewProviderServer(provider)
+const pluginSchemaVersion = 1
 
-	if _, err := server.Health(context.Background()); err != nil {
-		log.Printf("plugin health check failed: %v", err)
-		os.Exit(1)
+func main() {
+	os.Exit(run(os.Stdout, os.Stderr, os.Getenv))
+}
+
+func run(stdout, stderr io.Writer, getenv func(string) string) int {
+	_, _ = fmt.Fprintf(stderr, "plugin_schema_version=%d\n", pluginSchemaVersion)
+
+	message, err := plugin.Message(plugin.Config{
+		Version: getenv("SEMREL_VERSION"),
+		DryRun:  getenv("SEMREL_DRY_RUN") == "true",
+	})
+	if err != nil {
+		fmt.Fprintln(stderr, "plugin-template:", err)
+		return 1
 	}
 
-	log.Printf("%s plugin template is ready", provider.Name())
+	fmt.Fprintln(stdout, message)
+	return 0
 }

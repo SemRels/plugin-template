@@ -1,14 +1,14 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: {{PROJECT_NAME}}
-Upstream-Contact: The {{PROJECT_NAME}} Authors <https://github.com/{{ORG_NAME}}/{{REPO_NAME}}>
-Source: {{REPO_URL}}
+Upstream-Name: plugin-template
+Upstream-Contact: The plugin-template Authors <https://github.com/SemRels/plugin-template>
+Source: https://github.com/SemRels/plugin-template
 
 # ----------------------------------------------------------------------------
 # Documentation and community health files
 # ----------------------------------------------------------------------------
 Files: *.md
  .github/**/*.md
-Copyright: {{COPYRIGHT_YEAR}} The {{PROJECT_NAME}} Authors
+Copyright: 2026 The plugin-template Authors
 License: Apache-2.0
 
 # ----------------------------------------------------------------------------
@@ -20,6 +20,7 @@ Files: Makefile
  go.mod
  go.sum
  .golangci.yml
+ .semrel.yaml
  *.template
  .gitignore
  .gitignore.template
@@ -30,8 +31,7 @@ Files: Makefile
  .reuse/dep5
  cmd/**/*.go
  internal/**/*.go
- proto/**
-Copyright: {{COPYRIGHT_YEAR}} The {{PROJECT_NAME}} Authors
+Copyright: 2026 The plugin-template Authors
 License: Apache-2.0
 
 # ----------------------------------------------------------------------------
@@ -40,5 +40,5 @@ License: Apache-2.0
 Files: LICENSE
  LICENSES/Apache-2.0.txt
  NOTICE
-Copyright: {{COPYRIGHT_YEAR}} The {{PROJECT_NAME}} Authors
+Copyright: 2026 The plugin-template Authors
 License: Apache-2.0
