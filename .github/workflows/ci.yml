@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go == '1.27rc1' && '1.27.0-rc.1' || format('{0}.x', matrix.go) }}
           allow-prereleases: true
