@@ -25,10 +25,10 @@ func run(stdout, stderr io.Writer, getenv func(string) string) int {
 		DryRun:  getenv("SEMREL_DRY_RUN") == "true",
 	})
 	if err != nil {
-		fmt.Fprintln(stderr, "plugin-template:", err)
+		_, _ = fmt.Fprintln(stderr, "plugin-template:", err)
 		return 1
 	}
 
-	fmt.Fprintln(stdout, message)
+	_, _ = fmt.Fprintln(stdout, message)
 	return 0
 }

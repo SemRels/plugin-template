@@ -4,13 +4,16 @@ on:
   push:
     branches: [main]
     paths:
-      - Dockerfile
       - Makefile
       - CODE_OF_CONDUCT.md
       - CONTRIBUTING.md
       - GOVERNANCE.md
       - SECURITY.md
       - MAINTAINERS.md
+      - .github/workflows/ci.yml
+      - .github/workflows/release.yml
+      - .github/workflows/semrel-release.yaml
+      - .github/workflows/security.yml
   workflow_dispatch:
     inputs:
       dry_run:
@@ -25,6 +28,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: template-sync-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   sync:
     name: "Sync ${{ matrix.plugin }}"
@@ -36,6 +43,8 @@ jobs:
         plugin:
           - analyzer-conventional
           - analyzer-default
+          - condition-bitbucket-pipelines
+          - condition-circleci
           - condition-generic
           - condition-gitea-actions
           - condition-github-actions
@@ -43,18 +52,27 @@ jobs:
           - generator-changelog-html
           - generator-changelog-md
           - generator-release-notes
+          - hook-discord
           - hook-email
           - hook-gitplugin
           - hook-jira
           - hook-matrix
           - hook-slack
           - hook-teams
+          - packager-nfpm
           - provider-bitbucket
           - provider-git
           - provider-gitea
           - provider-github
           - provider-gitlab
+          - publisher-crates
+          - publisher-docker
+          - publisher-generic-http
+          - publisher-npm
+          - publisher-oci
+          - publisher-pypi
           - updater-cargo
+          - updater-composer
           - updater-docker
           - updater-go
           - updater-gradle
@@ -63,17 +81,18 @@ jobs:
           - updater-maven
           - updater-npm
           - updater-nuget
+          - updater-pubspec
           - updater-python
           - updater-terraform
 
     steps:
       - name: Check out template
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           path: template
 
       - name: Check out plugin
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: "SemRels/${{ matrix.plugin }}"
           token: ${{ secrets.SYNC_TOKEN }}
@@ -96,11 +115,11 @@ jobs:
               cp "template/$f" "plugin/$f"
             fi
           done
-          if [ -f "template/Dockerfile" ] && [ -f "plugin/Dockerfile" ]; then
-            sed "s/plugin-template Authors/$PLUGIN Authors/" "template/Dockerfile" > "plugin/Dockerfile"
-          fi
           if [ "$INCLUDE_WORKFLOWS" = "true" ]; then
-            for wf in ci.yml release.yml security.yml; do
+            for wf in ci.yml release.yml security.yml semrel-release.yaml; do
+              if [ "$wf" = "semrel-release.yaml" ] && [ ! -f "plugin/.github/workflows/release.yml" ]; then
+                continue
+              fi
               if [ -f "template/.github/workflows/$wf" ] && [ -f "plugin/.github/workflows/$wf" ]; then
                 cp "template/.github/workflows/$wf" "plugin/.github/workflows/$wf"
               fi
@@ -138,7 +157,7 @@ jobs:
           fi
           git checkout -b "$BRANCH"
           git add -A
-          git commit -m "chore: sync from plugin-template@${SHORT_SHA} -- $CHANGED"
+          git commit --signoff -m "chore: sync from plugin-template@${SHORT_SHA} -- $CHANGED"
           git push origin "$BRANCH"
           TITLE="chore: sync from plugin-template"
           BODY="Automated sync from SemRels/plugin-template (${SHORT_SHA}). Updated: $CHANGED"
