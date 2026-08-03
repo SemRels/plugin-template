@@ -20,6 +20,12 @@ require('org.opencontainers.image.revision')
 require('org.opencontainers.image.version')
 require('--arg amd64 "${AMD64_IMAGE_DIGEST}"')
 require('--arg arm64 "${ARM64_IMAGE_DIGEST}"')
+require('oras resolve --oci-layout "${archive}:validation:${arch}"')
+require('oras resolve --platform "linux/${arch}" --oci-layout "${archive}:validation:${arch}"')
+require('oras cp --from-oci-layout "${archive}:validation:${arch}"')
+
+if '"${archive}:${arch}"' in workflow:
+    raise SystemExit("OCI archive references must include the validation repository and architecture tag")
 
 existing = workflow.index('if existing_digest=$(resolve_registry_ref "${exact_tag}"); then')
 candidate = workflow.index('candidate_tag="${IMAGE}:manifest-', existing)

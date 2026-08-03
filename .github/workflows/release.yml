@@ -319,13 +319,13 @@ jobs:
           sha256sum --check -- plugin-image-*.tar.sha256
           for arch in amd64 arm64; do
             archive="plugin-image-${arch}.tar"
-            source_digest=$(oras resolve --oci-layout "${archive}:${arch}")
-            platform_digest=$(oras resolve --platform "linux/${arch}" --oci-layout "${archive}:${arch}")
+            source_digest=$(oras resolve --oci-layout "${archive}:validation:${arch}")
+            platform_digest=$(oras resolve --platform "linux/${arch}" --oci-layout "${archive}:validation:${arch}")
             [[ "${source_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
             [[ "${platform_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
             # Registry deletion is manifest-scoped, so retain this run-scoped tag to protect the final index children.
             staging_tag="scan-${GITHUB_SHA:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${arch}"
-            oras cp --from-oci-layout "${archive}:${arch}" "${IMAGE}:${staging_tag}"
+            oras cp --from-oci-layout "${archive}:validation:${arch}" "${IMAGE}:${staging_tag}"
             pushed_digest=$(oras resolve "${IMAGE}:${staging_tag}")
             pushed_platform_digest=$(oras resolve --platform "linux/${arch}" "${IMAGE}:${staging_tag}")
             [[ "${pushed_digest}" == "${source_digest}" ]]
