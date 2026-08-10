@@ -43,6 +43,8 @@ jobs:
           - analyzer-conventional
           - analyzer-default
           - condition-generic
+          - condition-bitbucket-pipelines
+          - condition-circleci
           - condition-gitea-actions
           - condition-github-actions
           - condition-gitlab-ci
@@ -50,6 +52,7 @@ jobs:
           - generator-changelog-md
           - generator-release-notes
           - hook-email
+          - hook-discord
           - hook-gitplugin
           - hook-jira
           - hook-matrix
@@ -60,7 +63,14 @@ jobs:
           - provider-gitea
           - provider-github
           - provider-gitlab
+          - publisher-crates
+          - publisher-generic-http
+          - publisher-npm
+          - publisher-oci
+          - publisher-pypi
+          - packager-nfpm
           - updater-cargo
+          - updater-composer
           - updater-docker
           - updater-go
           - updater-gradle
@@ -70,6 +80,7 @@ jobs:
           - updater-npm
           - updater-nuget
           - updater-python
+          - updater-pubspec
           - updater-terraform
 
     steps:
