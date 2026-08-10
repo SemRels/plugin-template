@@ -11,6 +11,12 @@ on:
       - GOVERNANCE.md
       - SECURITY.md
       - MAINTAINERS.md
+      - .github/workflows/ci.yml
+      - .github/workflows/release.yml
+      - .github/workflows/security.yml
+      - .github/workflows/sync-template.yml
+  schedule:
+    - cron: "17 3 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -20,7 +26,7 @@ on:
       include_workflows:
         description: Also sync .github/workflows/ files (requires SYNC_TOKEN with workflow scope - PAT from github.com/settings/tokens with repo+workflow scopes)
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -82,7 +88,7 @@ jobs:
       - name: Apply template files
         env:
           PLUGIN: ${{ matrix.plugin }}
-          INCLUDE_WORKFLOWS: ${{ inputs.include_workflows || 'false' }}
+          INCLUDE_WORKFLOWS: ${{ github.event_name == 'push' || github.event_name == 'schedule' || inputs.include_workflows }}
         shell: bash
         run: |
           set -euo pipefail
@@ -131,7 +137,7 @@ jobs:
             exit 0
           fi
           SHORT_SHA="${COMMIT_SHA:0:7}"
-          BRANCH="chore/sync-template-$(date +%Y%m%d)"
+          BRANCH="chore/sync-template-${SHORT_SHA}"
           if git ls-remote --exit-code origin "refs/heads/$BRANCH" > /dev/null 2>&1; then
             echo "Branch $BRANCH already exists - skipping"
             exit 0
