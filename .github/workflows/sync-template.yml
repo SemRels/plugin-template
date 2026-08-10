@@ -103,22 +103,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p plugin/.github/workflows
           for f in CODE_OF_CONDUCT.md CONTRIBUTING.md; do
-            if [ -f "template/$f" ] && [ -f "plugin/$f" ]; then
+            if [ -f "template/$f" ]; then
               sed "s/{{PROJECT_NAME}}/$PLUGIN/g; s/{{DEFAULT_BRANCH}}/main/g" "template/$f" > "plugin/$f"
             fi
           done
           for f in Makefile GOVERNANCE.md SECURITY.md MAINTAINERS.md; do
-            if [ -f "template/$f" ] && [ -f "plugin/$f" ]; then
+            if [ -f "template/$f" ]; then
               cp "template/$f" "plugin/$f"
             fi
           done
-          if [ -f "template/Dockerfile" ] && [ -f "plugin/Dockerfile" ]; then
+          if [ -f "template/Dockerfile" ]; then
             sed "s/plugin-template Authors/$PLUGIN Authors/" "template/Dockerfile" > "plugin/Dockerfile"
           fi
           if [ "$INCLUDE_WORKFLOWS" = "true" ]; then
+            # semrel-release.yaml is a plugin-specific overlay and is not managed here.
             for wf in ci.yml release.yml security.yml; do
-              if [ -f "template/.github/workflows/$wf" ] && [ -f "plugin/.github/workflows/$wf" ]; then
+              if [ -f "template/.github/workflows/$wf" ]; then
                 cp "template/.github/workflows/$wf" "plugin/.github/workflows/$wf"
               fi
             done
