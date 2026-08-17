@@ -11,6 +11,12 @@ on:
       - GOVERNANCE.md
       - SECURITY.md
       - MAINTAINERS.md
+      - .github/workflows/ci.yml
+      - .github/workflows/release.yml
+      - .github/workflows/security.yml
+      - .github/workflows/sync-template.yml
+  schedule:
+    - cron: "17 3 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -20,51 +26,50 @@ on:
       include_workflows:
         description: Also sync .github/workflows/ files (requires SYNC_TOKEN with workflow scope - PAT from github.com/settings/tokens with repo+workflow scopes)
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
 
 jobs:
+  discover:
+    name: Discover plugins
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      plugins: ${{ steps.discover.outputs.plugins }}
+    steps:
+      - name: Discover plugin repositories
+        id: discover
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          ORG: ${{ github.repository_owner }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          plugins="$(
+            gh api --paginate "orgs/${ORG}/repos?per_page=100&type=all" \
+              --jq '.[] | select(.archived == false and .fork == false and
+                (.name | test("^(analyzer|condition|generator|hook|packager|provider|publisher|updater)-"))) | .name' |
+              jq -R -s -c 'split("\n") | map(select(length > 0)) | sort | unique'
+          )"
+          if [ "$plugins" = "[]" ]; then
+            echo "No plugin repositories were discovered." >&2
+            exit 1
+          fi
+          echo "Discovered plugins: $plugins"
+          printf 'plugins=%s\n' "$plugins" >> "$GITHUB_OUTPUT"
+
   sync:
     name: "Sync ${{ matrix.plugin }}"
     runs-on: ubuntu-latest
+    needs: discover
     strategy:
       fail-fast: false
       max-parallel: 8
       matrix:
-        plugin:
-          - analyzer-conventional
-          - analyzer-default
-          - condition-generic
-          - condition-gitea-actions
-          - condition-github-actions
-          - condition-gitlab-ci
-          - generator-changelog-html
-          - generator-changelog-md
-          - generator-release-notes
-          - hook-email
-          - hook-gitplugin
-          - hook-jira
-          - hook-matrix
-          - hook-slack
-          - hook-teams
-          - provider-bitbucket
-          - provider-git
-          - provider-gitea
-          - provider-github
-          - provider-gitlab
-          - updater-cargo
-          - updater-docker
-          - updater-go
-          - updater-gradle
-          - updater-helm
-          - updater-homebrew
-          - updater-maven
-          - updater-npm
-          - updater-nuget
-          - updater-python
-          - updater-terraform
+        plugin: ${{ fromJSON(needs.discover.outputs.plugins) }}
 
     steps:
       - name: Check out template
@@ -82,26 +87,28 @@ jobs:
       - name: Apply template files
         env:
           PLUGIN: ${{ matrix.plugin }}
-          INCLUDE_WORKFLOWS: ${{ inputs.include_workflows || 'false' }}
+          INCLUDE_WORKFLOWS: ${{ github.event_name == 'push' || github.event_name == 'schedule' || inputs.include_workflows }}
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p plugin/.github/workflows
           for f in CODE_OF_CONDUCT.md CONTRIBUTING.md; do
-            if [ -f "template/$f" ] && [ -f "plugin/$f" ]; then
+            if [ -f "template/$f" ]; then
               sed "s/{{PROJECT_NAME}}/$PLUGIN/g; s/{{DEFAULT_BRANCH}}/main/g" "template/$f" > "plugin/$f"
             fi
           done
           for f in Makefile GOVERNANCE.md SECURITY.md MAINTAINERS.md; do
-            if [ -f "template/$f" ] && [ -f "plugin/$f" ]; then
+            if [ -f "template/$f" ]; then
               cp "template/$f" "plugin/$f"
             fi
           done
-          if [ -f "template/Dockerfile" ] && [ -f "plugin/Dockerfile" ]; then
+          if [ -f "template/Dockerfile" ]; then
             sed "s/plugin-template Authors/$PLUGIN Authors/" "template/Dockerfile" > "plugin/Dockerfile"
           fi
           if [ "$INCLUDE_WORKFLOWS" = "true" ]; then
+            # semrel-release.yaml is a plugin-specific overlay and is not managed here.
             for wf in ci.yml release.yml security.yml; do
-              if [ -f "template/.github/workflows/$wf" ] && [ -f "plugin/.github/workflows/$wf" ]; then
+              if [ -f "template/.github/workflows/$wf" ]; then
                 cp "template/.github/workflows/$wf" "plugin/.github/workflows/$wf"
               fi
             done
@@ -131,7 +138,7 @@ jobs:
             exit 0
           fi
           SHORT_SHA="${COMMIT_SHA:0:7}"
-          BRANCH="chore/sync-template-$(date +%Y%m%d)"
+          BRANCH="chore/sync-template-${SHORT_SHA}"
           if git ls-remote --exit-code origin "refs/heads/$BRANCH" > /dev/null 2>&1; then
             echo "Branch $BRANCH already exists - skipping"
             exit 0
