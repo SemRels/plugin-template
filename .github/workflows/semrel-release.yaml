@@ -46,13 +46,18 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=$(gh release view --repo SemRels/semrel --json tagName -q .tagName)
+          DOWNLOAD_DIR="$RUNNER_TEMP/semrel-download"
+          mkdir -p "$DOWNLOAD_DIR"
+          # Support both GoReleaser naming schemes used by existing semrel releases.
           gh release download "$VERSION" --repo SemRels/semrel \
-            --pattern "semrel_*_linux_amd64.tar.gz" --dir /tmp
-          mkdir -p /tmp/semrel-dl
-          tar -xzf /tmp/semrel_*_linux_amd64.tar.gz -C /tmp/semrel-dl
-          mv /tmp/semrel-dl/semrel /tmp/semrel
-          chmod +x /tmp/semrel
-          echo "semrel $(/tmp/semrel --version 2>/dev/null || /tmp/semrel version 2>/dev/null || echo installed)"
+            --pattern "semrel_*_linux_amd64.tar.gz" \
+            --pattern "semrel-*-linux-amd64.tar.gz" --dir "$DOWNLOAD_DIR"
+          ARCHIVE=$(find "$DOWNLOAD_DIR" -maxdepth 1 -type f -name '*.tar.gz' -print -quit)
+          test -n "$ARCHIVE"
+          tar -xzf "$ARCHIVE" -C "$DOWNLOAD_DIR"
+          mv "$DOWNLOAD_DIR/semrel" "$RUNNER_TEMP/semrel"
+          chmod +x "$RUNNER_TEMP/semrel"
+          echo "semrel $($RUNNER_TEMP/semrel --version 2>/dev/null || $RUNNER_TEMP/semrel version 2>/dev/null || echo installed)"
 
       - name: Install plugins from source
         # Build condition-github-actions from source (main branch) until binary
