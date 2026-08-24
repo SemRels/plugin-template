@@ -11,10 +11,6 @@ on:
       - GOVERNANCE.md
       - SECURITY.md
       - MAINTAINERS.md
-      - .github/workflows/ci.yml
-      - .github/workflows/release.yml
-      - .github/workflows/security.yml
-      - .github/workflows/sync-template.yml
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
@@ -87,7 +83,10 @@ jobs:
       - name: Apply template files
         env:
           PLUGIN: ${{ matrix.plugin }}
-          INCLUDE_WORKFLOWS: ${{ github.event_name == 'push' || github.event_name == 'schedule' || inputs.include_workflows }}
+          # Workflow files require the repository's SYNC_TOKEN to have the
+          # GitHub Actions workflow scope. Never include them in unattended
+          # push/schedule syncs, which use the least-privileged token.
+          INCLUDE_WORKFLOWS: ${{ github.event_name == 'workflow_dispatch' && inputs.include_workflows || 'false' }}
         shell: bash
         run: |
           set -euo pipefail
