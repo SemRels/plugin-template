@@ -145,7 +145,13 @@ jobs:
           git checkout -b "$BRANCH"
           git add -A
           git commit -m "chore: sync from plugin-template@${SHORT_SHA} -- $CHANGED"
-          git push origin "$BRANCH"
+          if ! git push origin "$BRANCH"; then
+            if git ls-remote --exit-code origin "refs/heads/$BRANCH" > /dev/null 2>&1; then
+              echo "Branch $BRANCH was created concurrently - skipping PR"
+              exit 0
+            fi
+            exit 1
+          fi
           TITLE="chore: sync from plugin-template"
           BODY="Automated sync from SemRels/plugin-template (${SHORT_SHA}). Updated: $CHANGED"
           gh pr create --repo "SemRels/$PLUGIN" --title "$TITLE" --body "$BODY" --base main || echo "PR may already exist"
