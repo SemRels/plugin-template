@@ -23,12 +23,12 @@ stdout: example plugin invoked for version 1.2.3 (dry-run: false)
 
 | Item | Behavior |
 | --- | --- |
-| `plugin_schema_version=1` | The **first line written to stderr** must be `plugin_schema_version=1`. |
+| `plugin_schema_version=1` | The **first line written to stderr** must be `plugin_schema_version=1` (declares schema v1 + dry-run contract support). |
 | `SEMREL_VERSION` | Required release version for this example plugin. |
-| `SEMREL_DRY_RUN` | Optional boolean (`true`/`false`) indicating dry-run mode. |
+| `SEMREL_DRY_RUN` | Boolean (`true`/`false`) indicating dry-run mode. Must write human-readable status logs on `stderr`, preview diffs/content/payloads on `stdout`, fail soft on missing credentials, and make zero side effects. |
 | `SEMREL_PLUGIN_*` | Reserved for your phase-specific plugin configuration. |
-| stdout | Write the plugin's functional output here. |
-| stderr | Write diagnostics, validation errors, and logs here. |
+| stdout | Write the plugin's functional output (and in dry-run: diffs, rendered changelogs/release notes, commands, or payloads) here. |
+| stderr | Write `plugin_schema_version=1`, optional `plugin_dry_run_summary=<json>`, diagnostics, validation errors, and dry-run log lines here. |
 | exit code | `0` means success; any non-zero code means failure. |
 
 ## Repository layout

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://registry.semrel.io/schemas/plugins/plugin-template/v1.json",
+  "title": "plugin-template plugin configuration",
+  "description": "Schema v1 for the plugin-template semrel plugin. Configure via SEMREL_* environment variables.",
+  "type": "object",
+  "x-semrel-dry-run": true,
+  "properties": {
+    "SEMREL_VERSION": {
+      "type": "string",
+      "description": "Release version for the current semrel execution."
+    },
+    "SEMREL_DRY_RUN": {
+      "type": "string",
+      "enum": [
+        "true",
+        "false",
+        "1",
+        "0"
+      ],
+      "default": "false",
+      "description": "When true, print dry-run logs on stderr and preview output on stdout without side effects."
+    }
+  },
+  "additionalProperties": true
+}

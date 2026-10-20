@@ -29,6 +29,7 @@ Files: Makefile
  .github/**/*.json
  .github/**/*.template
  .reuse/dep5
+ schema/*.json
  cmd/**/*.go
  internal/**/*.go
 Copyright: 2026 The plugin-template Authors
