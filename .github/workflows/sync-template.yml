@@ -1,18 +1,6 @@
 name: Sync Template to Plugins
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - Dockerfile
-      - Makefile
-      - CODE_OF_CONDUCT.md
-      - CONTRIBUTING.md
-      - GOVERNANCE.md
-      - SECURITY.md
-      - MAINTAINERS.md
-  schedule:
-    - cron: "17 3 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -23,6 +11,19 @@ on:
         description: Also sync .github/workflows/ files (requires SYNC_TOKEN with workflow scope - PAT from github.com/settings/tokens with repo+workflow scopes)
         type: boolean
         default: true
+  push:
+    branches:
+      - main
+    paths:
+      - Dockerfile
+      - Taskfile.yaml
+      - CODE_OF_CONDUCT.md
+      - CONTRIBUTING.md
+      - GOVERNANCE.md
+      - SECURITY.md
+      - MAINTAINERS.md
+  schedule:
+    - cron: "17 3 * * *"
 
 permissions:
   contents: read
@@ -31,10 +32,10 @@ jobs:
   discover:
     name: Discover plugins
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+
     outputs:
       plugins: ${{ steps.discover.outputs.plugins }}
+
     steps:
       - name: Discover plugin repositories
         id: discover
@@ -58,9 +59,10 @@ jobs:
           printf 'plugins=%s\n' "$plugins" >> "$GITHUB_OUTPUT"
 
   sync:
-    name: "Sync ${{ matrix.plugin }}"
+    name: "Sync ${{ matrix.plugin }} Plugin"
     runs-on: ubuntu-latest
     needs: discover
+
     strategy:
       fail-fast: false
       max-parallel: 8
@@ -69,16 +71,16 @@ jobs:
 
     steps:
       - name: Check out template
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: template
 
       - name: Check out plugin
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: "SemRels/${{ matrix.plugin }}"
-          token: ${{ secrets.SYNC_TOKEN }}
           path: plugin
+          token: ${{ secrets.SYNC_TOKEN }}
 
       - name: Apply template files
         env:
@@ -91,24 +93,21 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p plugin/.github/workflows
-          for f in CODE_OF_CONDUCT.md CONTRIBUTING.md; do
+          for f in CODE_OF_CONDUCT.md CONTRIBUTING.md Dockerfile GOVERNANCE.md MAINTAINERS.md SECURITY.md Taskfile.yaml; do
             if [ -f "template/$f" ]; then
-              sed "s/{{PROJECT_NAME}}/$PLUGIN/g; s/{{DEFAULT_BRANCH}}/main/g" "template/$f" > "plugin/$f"
+              sed "s/plugin-template/$PLUGIN/g" "template/$f" > "plugin/$f"
             fi
           done
-          for f in Makefile GOVERNANCE.md SECURITY.md MAINTAINERS.md; do
+          for f in .editorconfig .golangci.yml .pre-commit-config.yaml commitlint.config.js; do
             if [ -f "template/$f" ]; then
               cp "template/$f" "plugin/$f"
             fi
           done
-          if [ -f "template/Dockerfile" ]; then
-            sed "s/plugin-template Authors/$PLUGIN Authors/" "template/Dockerfile" > "plugin/Dockerfile"
-          fi
           if [ "$INCLUDE_WORKFLOWS" = "true" ]; then
-            # semrel-release.yaml is a plugin-specific overlay and is not managed here.
-            for wf in ci.yml release.yml security.yml; do
+            # semrel-release.yml is a plugin-specific overlay and is not managed here.
+            for wf in auto-label.yml binaries.yml ci.yml container.yml scorecard.yml security.yml; do
               if [ -f "template/.github/workflows/$wf" ]; then
-                cp "template/.github/workflows/$wf" "plugin/.github/workflows/$wf"
+                sed "s/plugin-template/$PLUGIN/g" "template/.github/workflows/$wf" > "plugin/.github/workflows/$wf"
               fi
             done
           fi
@@ -155,3 +154,5 @@ jobs:
           TITLE="chore: sync from plugin-template"
           BODY="Automated sync from SemRels/plugin-template (${SHORT_SHA}). Updated: $CHANGED"
           gh pr create --repo "SemRels/$PLUGIN" --title "$TITLE" --body "$BODY" --base main || echo "PR may already exist"
+
+...
