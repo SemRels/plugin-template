@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-FileCopyrightText: 2026 The plugin-template Authors
+// SPDX-FileCopyrightText: 2026 The semrel Authors
 
 package main
 
@@ -18,7 +18,7 @@ func main() {
 }
 
 func run(stdout, stderr io.Writer, getenv func(string) string) int {
-	_, _ = fmt.Fprintf(stderr, "plugin_schema_version=%d\n", pluginSchemaVersion)
+	fmt.Fprintf(stderr, "plugin_schema_version=%d\n", pluginSchemaVersion)
 
 	message, err := plugin.Message(plugin.Config{
 		Version: getenv("SEMREL_VERSION"),
