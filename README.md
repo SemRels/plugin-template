@@ -61,10 +61,10 @@ go test ./...
 
 ```yaml
 plugins:
-  - name: example-plugin
-    path: ~/.semrel/plugins/semrel-plugin-example
-    env:
-      SEMREL_PLUGIN_SAMPLE_OPTION: "value"
+  - uses: "@semrel/example-plugin"
+    phase: release
+    args:
+      sample_option: "value"
 ```
 
 ## License
