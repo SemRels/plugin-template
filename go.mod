@@ -1,6 +1,6 @@
 module github.com/SemRels/plugin-template
 
-go 1.25
+go 1.27.2
 
 require github.com/stretchr/testify v1.12.1
 
