@@ -15,13 +15,16 @@ on:
     branches:
       - main
     paths:
-      - Dockerfile
-      - Taskfile.yaml
+      - .editorconfig
+      - .golangci.yml
+      - .pre-commit-config.yaml
       - CODE_OF_CONDUCT.md
+      - commitlint.config.js
       - CONTRIBUTING.md
       - GOVERNANCE.md
-      - SECURITY.md
       - MAINTAINERS.md
+      - SECURITY.md
+      - Taskfile.yaml
   schedule:
     - cron: "17 3 * * *"
 
@@ -93,7 +96,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p plugin/.github/workflows
-          for f in CODE_OF_CONDUCT.md CONTRIBUTING.md Dockerfile GOVERNANCE.md MAINTAINERS.md SECURITY.md Taskfile.yaml; do
+          for f in CODE_OF_CONDUCT.md CONTRIBUTING.md GOVERNANCE.md MAINTAINERS.md SECURITY.md Taskfile.yaml; do
             if [ -f "template/$f" ]; then
               sed "s/plugin-template/$PLUGIN/g" "template/$f" > "plugin/$f"
             fi
